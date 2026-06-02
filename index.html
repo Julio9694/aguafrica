@@ -120,7 +120,7 @@
 <header>
   <div class="hdr">
     <div>
-      <h1>AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
+      <h1>Test AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
       <div class="hdr-sub">Legendários · Dashboard de Arrecadação</div>
     </div>
     <div class="hdr-meta">
@@ -377,7 +377,8 @@ function handleDonations(input){
         }
 
         const regional=getRegional(trilha);
-        const comp_key=`${id}__${dataCad.replace(/\s+/g,'_')}__${valor}`;
+        // comp_key uses row index to guarantee uniqueness per spreadsheet row
+        const comp_key=`${id}__${dataCad.replace(/\s+/g,'_')}__${valor}__${records.length}`;
         records.push({comp_key,id,nome,trilha,produto,regional,data:dataNorm,valor,status});
       }
 
