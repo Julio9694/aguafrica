@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGUÁFRICA 100 POZOS · Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--wl:#4ab3d8;--water:#2a7fa8;--gold:#f0b429;--earth:#c4863a;--bg:#0d0b07;--card:#1c1710;--border:rgba(200,160,60,0.2);--text:#e8d5a3;--muted:#8a7a5a;--green:#3a7a4a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(42,127,168,.07) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(196,134,58,.07) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px;}
+  header{padding:26px 0 18px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;}
+  h1{font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1;}
+  h1 span{color:var(--wl);}
+  .hdr-sub{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+  .hdr-meta{text-align:right;font-size:.72rem;color:var(--muted);}
+  #last-upd{color:var(--gold);font-weight:500;}
+
+  .up-box{background:var(--card);border:1px dashed var(--border);border-radius:12px;padding:14px 18px;margin-bottom:20px;}
+  .up-lbl{font-family:'Oswald',sans-serif;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:.65rem;padding:2px 8px;border-radius:100px;background:rgba(58,122,74,.15);border:1px solid var(--green);color:#7abe8a;}
+  .badge-sb{background:rgba(63,207,142,.1);border-color:#3fcf8e;color:#3fcf8e;}
+  .up-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .ubtn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-family:'Barlow',sans-serif;font-size:.8rem;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid;position:relative;overflow:hidden;}
+  .ubtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0;}
+  .u-don{background:rgba(42,127,168,.15);border-color:var(--water);color:var(--wl);}
+  .u-don:hover{background:rgba(42,127,168,.28);}
+  .u-clr{background:rgba(255,80,80,.1);border-color:rgba(255,80,80,.3);color:#f87171;}
+  .u-clr:hover{background:rgba(255,80,80,.2);}
+  .up-st{font-size:.75rem;color:var(--muted);margin-top:7px;display:flex;align-items:center;gap:8px;}
+  .ok{color:#7abe8a;} .warn{color:var(--gold);} .err{color:#f87171;}
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.1);border-top-color:var(--wl);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;}
+  .kpi.c-wl::before{background:var(--wl);} .kpi.c-gd::before{background:var(--gold);}
+  .kpi.c-ea::before{background:var(--earth);} .kpi.c-gr::before{background:#7abe8a;}
+  .kpi-lbl{font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .kpi-val{font-family:'Oswald',sans-serif;font-size:1.9rem;font-weight:600;line-height:1;margin-bottom:2px;}
+  .kpi-sub{font-size:.72rem;color:var(--muted);}
+
+  .prog-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:20px;}
+  .prog-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+  .prog-pct{font-family:'Oswald',sans-serif;font-size:1.7rem;color:var(--wl);}
+  .prog-bg{height:13px;background:rgba(255,255,255,.05);border-radius:100px;overflow:hidden;margin-bottom:9px;}
+  .prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--water),var(--wl));transition:width .8s cubic-bezier(.4,0,.2,1);}
+  .prog-leg{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;}
+  .ctitle{font-family:'Oswald',sans-serif;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+  .bar-list{display:flex;flex-direction:column;gap:8px;}
+  .brow{display:flex;align-items:center;gap:9px;}
+  .blbl{font-size:.75rem;min-width:82px;flex-shrink:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .btrack{flex:1;height:21px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden;}
+  .bfill{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:.7rem;font-weight:600;transition:width .8s;}
+  .bpct{font-size:.72rem;color:var(--muted);min-width:36px;}
+  .don-list{display:flex;flex-direction:column;gap:6px;}
+  .drow{display:flex;align-items:center;gap:9px;padding:6px 9px;border-radius:7px;background:rgba(255,255,255,.03);}
+  .drank{font-family:'Oswald',sans-serif;font-size:.8rem;color:var(--muted);min-width:20px;}
+  .dname{flex:1;font-size:.78rem;font-weight:500;}
+  .damt{font-family:'Oswald',sans-serif;font-size:.9rem;color:var(--gold);}
+  .dbar{width:44px;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;}
+  .dbar-f{height:100%;background:var(--gold);border-radius:2px;}
+  .tbl{width:100%;border-collapse:collapse;font-size:.78rem;}
+  .tbl th{font-size:.63rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:6px 9px;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
+  .tbl td{padding:7px 9px;border-bottom:1px solid rgba(200,160,60,.06);}
+  .tbl tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;font-size:.65rem;padding:2px 6px;border-radius:100px;font-weight:500;}
+  .t-reg{background:rgba(42,127,168,.2);color:var(--wl);}
+
+  .wells-sec{margin-bottom:20px;}
+  .sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .sec-title{font-family:'Oswald',sans-serif;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);}
+  .reg-block{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px;}
+  .reg-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;}
+  .reg-name{font-family:'Oswald',sans-serif;font-size:1rem;letter-spacing:.04em;}
+  .reg-stats{font-size:.74rem;color:var(--muted);}
+  .reg-stats span{color:var(--gold);font-weight:500;}
+  .reg-prog{height:5px;background:rgba(255,255,255,.05);border-radius:100px;overflow:hidden;margin-bottom:12px;}
+  .reg-prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--water),var(--wl));transition:width .8s;}
+  .wells-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+  .wcard{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .wcard.complete .wlbl{color:var(--wl);}
+  .wcard.forming .wlbl{color:var(--gold);}
+  .wlbl{font-family:'Oswald',sans-serif;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;}
+  .wcotas{font-family:'Oswald',sans-serif;font-size:.95rem;color:var(--gold);}
+  .wcotas small{font-size:.6rem;color:var(--muted);font-family:'Barlow',sans-serif;}
+  .wcard.forming{animation:pw 2s ease-in-out infinite;}
+  @keyframes pw{0%,100%{filter:drop-shadow(0 0 3px rgba(240,180,41,0))}50%{filter:drop-shadow(0 0 9px rgba(240,180,41,.5))}}
+
+  #lov{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:10px;}
+  .lt{font-family:'Oswald',sans-serif;font-size:1rem;letter-spacing:.2em;color:var(--muted);}
+  .ld{width:7px;height:7px;border-radius:50%;background:var(--wl);animation:ld 1s ease-in-out infinite;}
+  @keyframes ld{0%,100%{opacity:.2}50%{opacity:1}}
+  footer{border-top:1px solid var(--border);padding:16px 0;text-align:center;font-size:.68rem;color:var(--muted);letter-spacing:.1em;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="lov">
+  <div class="lt">CARREGANDO DADOS</div>
+  <div style="display:flex;gap:7px">
+    <div class="ld" style="animation-delay:0s"></div>
+    <div class="ld" style="animation-delay:.2s"></div>
+    <div class="ld" style="animation-delay:.4s"></div>
+  </div>
+  <div id="lov-msg" style="font-size:.72rem;color:var(--muted);margin-top:4px">Conectando ao Supabase…</div>
+</div>
+
+<div class="wrap" style="display:none" id="main">
+<header>
+  <div class="hdr">
+    <div>
+      <h1>AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
+      <div class="hdr-sub">Legendários · Dashboard de Arrecadação</div>
+    </div>
+    <div class="hdr-meta">
+      <div>Atualizado: <span id="last-upd">—</span></div>
+      <div id="rec-cnt" style="margin-top:2px;"></div>
+    </div>
+  </div>
+</header>
+
+<div class="up-box">
+  <div class="up-lbl">
+    📂 Importar planilha
+    <span class="badge badge-sb">🟢 Supabase Online</span>
+  </div>
+  <div class="up-btns">
+    <label class="ubtn u-don">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 16V4M4 16l8 4 8-4"/></svg>
+      Planilha de Doações (.xlsx)
+      <input type="file" accept=".xlsx,.xls" onchange="handleDonations(this)">
+    </label>
+    <button class="ubtn u-clr" onclick="clearAll()">🗑 Limpar banco</button>
+  </div>
+  <div class="up-st" id="up-st"><span>Carregando dados do Supabase…</span></div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi c-wl"><div class="kpi-lbl">Total Arrecadado</div><div class="kpi-val" id="k-total">$ 0</div><div class="kpi-sub">em doações</div></div>
+  <div class="kpi c-gd"><div class="kpi-lbl">Total de Cotas</div><div class="kpi-val" id="k-cotas">0</div><div class="kpi-sub">cotas de $ 20,00</div></div>
+  <div class="kpi c-ea"><div class="kpi-lbl">Doadores Únicos</div><div class="kpi-val" id="k-donors">0</div><div class="kpi-sub">pessoas contribuindo</div></div>
+  <div class="kpi c-gr"><div class="kpi-lbl">Poços Completos</div><div class="kpi-val" id="k-wells">0</div><div class="kpi-sub">de 100 pozos</div></div>
+  <div class="kpi c-wl"><div class="kpi-lbl">Regionais Ativas</div><div class="kpi-val" id="k-regs">0</div><div class="kpi-sub">regiões participando</div></div>
+</div>
+
+<div class="prog-box">
+  <div class="prog-hdr">
+    <div>
+      <div class="sec-title" style="margin:0">META — 100 POZOS</div>
+      <div id="meta-lbl" style="font-size:.78rem;color:var(--muted);margin-top:2px">85.000 cotas · $ 1.700.000</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:.68rem;color:var(--muted)">Meta $</span>
+      <input id="meta-inp" type="number" value="1700000" min="1"
+        style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:Barlow,sans-serif;font-size:.78rem;width:115px"
+        oninput="updateProgress()">
+      <div class="prog-pct" id="prog-pct">0%</div>
+    </div>
+  </div>
+  <div class="prog-bg"><div class="prog-fill" id="prog-bar" style="width:0%"></div></div>
+  <div class="prog-leg"><span>0</span><span id="prog-mid">0 cotas</span><span id="prog-end">Meta: 85.000 cotas</span></div>
+</div>
+
+<div class="wells-sec">
+  <div class="sec-hdr">
+    <div class="sec-title">⛽ POÇOS POR REGIONAL — 850 COTAS CADA</div>
+    <div id="wells-sum" style="font-size:.72rem;color:var(--muted)"></div>
+  </div>
+  <div id="wells-con"></div>
+</div>
+
+<div class="grid2">
+  <div class="card"><div class="ctitle">Cotas por Regional</div><div class="bar-list" id="ch-reg"></div></div>
+  <div class="card"><div class="ctitle">Evolução Diária (Cotas)</div><div id="ch-dias"></div></div>
+  <div class="card"><div class="ctitle">Top Doadores — Cotas</div><div class="don-list" id="ch-don"></div></div>
+  <div class="card"><div class="ctitle">Resumo por Data</div>
+    <table class="tbl"><thead><tr><th>Data</th><th>Cotas</th><th>Transações</th><th>Acumulado</th></tr></thead><tbody id="tb-dias"></tbody></table>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:24px">
+  <div class="ctitle">Últimas Doações</div>
+  <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>#</th><th>Nome</th><th>Trilha</th><th>Regional</th><th>Data</th><th>Cotas</th></tr></thead>
+      <tbody id="tb-full"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>AHU · AMOR, HONRA E UNIDADE · LEGENDÁRIOS AGUÁFRICA 100 POZOS</footer>
+</div>
+
+<script>
+// ================================================================
+// SUPABASE CONFIG
+// ================================================================
+const SB_URL  = 'https://kjwhjweeysynfgttgghb.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtqd2hqd2VleXN5bmZndHRnZ2hiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzk2MTAsImV4cCI6MjA5NTk1NTYxMH0.XQIEDormUuE4I6xjUlK2DEpFNAGoLTwlXXaediOoI4U';
+const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+
+async function sbFetch(path, opts={}) {
+  const r = await fetch(SB_URL+'/rest/v1/'+path, { headers: SB_HDR, ...opts });
+  if (!r.ok) { const t=await r.text(); throw new Error(t); }
+  return r.status===204 ? null : r.json();
+}
+
+// ================================================================
+// CONSTANTS & DE-PARA
+// ================================================================
+const COTA_VAL=20, COTAS_POCO=850;
+const COLORS=['#4ab3d8','#f0b429','#c4863a','#7abe8a','#a78bfa','#f87171','#34d399','#fb923c','#60a5fa','#e879f9'];
+
+const DEPARA={
+  "TRACK VALE DO ACRE - RIO BRANCO/ AC":"REG 8 BR","TRACK ROTA DOS HEMISFERIOS - MACAPA/ AP":"REG 8 BR",
+  "TRACK VALE DOS ALFAS -  MACAPA/ AP":"REG 8 BR","TRACK CAMINHOS DA AMAZONIA - MANAUS/ AM":"REG 8 BR",
+  "TRACK BRAVOS DO NORTE - BELEM/ PA":"REG 8 BR","TRACK SENTINELA DA AMAZONIA - BELEM/ PA":"REG 8 BR",
+  "TRACK CAMINHO DAS PEDRAS - JI-PARANA/ RO":"REG 8 BR","TRACK DESTEMIDO PIONEIRO (MATERIAL TOP)  - PORTO VELHO/ RO":"REG 8 BR",
+  "TRACK VALE DO ARAGUAIA - PALMAS/ TO":"REG 8 BR","TRACK VALE JALAPAO - PALMAS/ TO":"REG 8 BR",
+  "TRACK LA REPUBLICA (ROTA DOS MARECHAIS) - ARAPIRACA/ AL":"REG 7 BR","TRACK ROTA DAS AGUAS - MACEIO/ AL":"REG 7 BR",
+  "TRACK DESCOBRIMENTO - SALVADOR/ BA":"REG 7 BR","TRACK GUARDIOES DO CERRADO - LUIZ EDUARDO MAGALHAES/ BA":"REG 7 BR",
+  "TRACK TERRA PROMETIDA - VITORIA DA CONQUISTA/ BA":"REG 7 BR","TRACK VALE DO SAO FRANCISCO - JUAZEIRO/ BA":"REG 7 BR",
+  "TRACK ROTA DA LUZ - EUSEBIO/ CE":"REG 7 BR","TRACK SHEKINAH KARIRI - JUAZEIRO DO NORTE/ CE":"REG 7 BR",
+  "TRACK BOLIVIA - CAXIAS/ MA":"REG 7 BR","TRACK GRUPO MARANHAO - IMPERATRIZ/ MA":"REG 7 BR",
+  "TRACK ROTA DOS LENCOIS - SAO LUIS/ MA":"REG 7 BR","TRACK VALE DAS MESAS - IMPERATRIZ/ MA":"REG 7 BR",
+  "TRACK CAMINHO DA SERRA - BAYEAUX/ PB":"REG 7 BR","TRACK VALENTE - JOAO PESSOA/ PB":"REG 7 BR",
+  "TRACK RIO DAS NUVENS - PAULISTA/ PE":"REG 7 BR","TRACK ROTA DOS GIGANTES - ARACAJU/ SE":"REG 7 BR",
+  "TRACK DERRUBANDO GIGANTES - BRASILIA/ DF":"REG 6 BR","TRACK ROTA DOS REIS - BRASILIA/ DF":"REG 6 BR",
+  "TRACK VALE DO SAO FRANCISCO - BRASILIA/ DF":"REG 6 BR","TRACK A JORNADA - GOIANIA/GO":"REG 6 BR",
+  "TRACK EL FUEGO (EMERSON) - CATALAO/ GO":"REG 6 BR","TRACK LA REPUBLICA (PR. NELSINHO) - ANAPOLIS/ GO":"REG 6 BR",
+  "TRACK LA SIERRA CALABAZA - RIO VERDE/ GO":"REG 6 BR","TRACK AGUA DE PEDRA - ANAPOLIS GO":"REG 6 BR",
+  "TRACK ATITUDE":"REG 6 BR",
+  "TRACK AGUA DE PEDRA - JUINA/ MT":"REG 6 BR","TRACK CACADORES DE LIBERDADE - SINOP/ MT":"REG 6 BR",
+  "TRACK CAMINHO DAS AGUAS - CAMPO NOVO DO PARECIS/ MT":"REG 6 BR","TRACK MONTE CRISTO - PONTES E LACERDA/ MT":"REG 6 BR",
+  "TRACK O SEMEADOR - NOVA MUTUM/ MT":"REG 6 BR","TRACK ROTA DOS DIAMANTES - SORRISO/ MT":"REG 6 BR",
+  "TRACK SERRA DO RONCADOR - CANARANA/ MT":"REG 6 BR","TRACK TELES PIRES - ALTO FLORESTA/ MT":"REG 6 BR",
+  "TRACK VALE DA FORJA - RONDONOPOLIS/ MT":"REG 6 BR","TRACK VALE DAS GRACAS - CUIABA/ MT":"REG 6 BR",
+  "TRACK VALE DO TELES PIRES - ALTA FLORESTA/ MT":"REG 6 BR","TRACK VALE DO XINGU - VILA RICA/ MT":"REG 6 BR",
+  "TRACK  LA MISSION - BELO HORIZONTE/ MG":"REG 5 BR","TRACK A FORJA - BELO HORIZONTE/ MG":"REG 5 BR",
+  "TRACK ESTRADA REAL - BELO HORIZONTE/ MG":"REG 5 BR","TRACK FACE DO LEAO - BELO HORIZONTE/ MG":"REG 5 BR",
+  "TRACK LA COMUNIDAD - BELO HORIZONTE/ MG":"REG 5 BR","TRACK LA CONQUISTA - BELO HORIZONTE/ MG":"REG 5 BR",
+  "TRACK LA SIERRA - BELO HORIZONTE/ MG":"REG 5 BR","TRACK MONTE SANTO - BELO HORIZONTE/ MG":"REG 5 BR",
+  "TRACK SOL DA LIBERDADE - CONTAGEM/ MG":"REG 5 BR","TRACK LA TRINDAD - DIVINOPOLIS/ MG":"REG 5 BR",
+  "TRACK LAS CAMPANAS - SAO JOAO DEL REI/ MG":"REG 5 BR","TRACK ROTA DA ALIANCA - PITANGUI/ MG":"REG 5 BR",
+  "TRACK REDENCAO - RIO DE JANEIRO/ RJ":"REG 5 BR","TRACK RIO PODEROSO - NITEROI/ RJ":"REG 5 BR",
+  "TRACK ROTA DO OLEIRO - PATOS DE MINAS/ MG":"REG 4 BR","TRACK EL VALLE - IPATINGA/ MG":"REG 4 BR",
+  "TRACK VALE 360 - FORMIGA/ MG":"REG 4 BR","TRACK VALE DAS BENCAOS - FORMIGA/ MG":"REG 4 BR",
+  "TRACK VALE DAS NASCENTES  - CAMPO BELO/ MG":"REG 4 BR","TRACK VALE DO PEQUI - PORTEIRINHA/ MG":"REG 4 BR",
+  "TRACK LA SABANA - JOAO PINHEIRO/ MG":"REG 4 BR","TRACK VALE DO VULCAO - POCOS DE CALDAS/ MG":"REG 4 BR",
+  "TRACK STONE - IAPU/ MG":"REG 4 BR","TRACK A ROCHA - UBERLANDIA MG":"REG 4 BR",
+  "TRACK CIDADE DA FE - UBERABA/ MG":"REG 4 BR","TRACK LEGACY - VITORIA/ ES":"REG 4 BR",
+  "TRACK PANTANAL - NOVA ADRADINA/ MS":"REG 3 BR","TRACK PONTE DA PEDRA - CAMPO GRANDE/ MS":"REG 3 BR",
+  "TRACK VALE DA ONCA - DOURADOS/ MS":"REG 3 BR","TRACK CAMINHO DOS VENTOS - PATO BRANCO/ PR":"REG 3 BR",
+  "TRACK CONSAGRACAO - CIANORTE/PR":"REG 3 BR","TRACK RENOVACAO - CURITIBA/ PR":"REG 3 BR",
+  "TRACK SUPERACAO - MARINGA/ PR":"REG 3 BR","TRACK TRANSFORMACAO - CURITIBA/ PR":"REG 3 BR",
+  "TRACK VALE DA ONCA - FRANCSICO BELTRAO/ PR":"REG 3 BR","TRACK BLUMENAU - BALNEARIO CAMBORIU/ SC":"REG 3 BR",
+  "TRACK CAMINHO DOS PRINCIPES - JOINVILLE/ SC":"REG 3 BR","TRACK FLORIPA - SAO JOSE/ SC":"REG 3 BR",
+  "TRACK ROTA NORTE (CAMINHO DO PRINCIPE) - JOINVILLE/ SC":"REG 3 BR",
+  "TRACK CASA DO OLEIRO - ITAPEMA/ SC":"REG 2 BR","TRACK CHAPECO - CHAPECO/ SC":"REG 2 BR",
+  "TRACK FORJADOS - CHAPECO/ SC":"REG 2 BR","TRACK RIO DO PEIXE - ZORTEA/ SC":"REG 2 BR",
+  "TRACK VALE DO CARVAO - CRICIUMA/ SC":"REG 2 BR",
+  "TRACK  VALE DOS TROPEIROS - CAPAO DA CANOA/ RS":"REG 2 BR","TRACK VALE DOS TROPEIROS - CAPAO DA CANOA/ RS":"REG 2 BR",
+  "TRACK ATITUDE - PORTO ALEGRE/ RS":"REG 2 BR","TRACK CAMINHO DAS ORIGENS - SANTO ANGELO/ RS":"REG 2 BR",
+  "TRACK FARROUPILHA - ERECHIM/ RS":"REG 2 BR","TRACK GRAMADO - CANELA/ RS":"REG 2 BR",
+  "TRACK MONTE NEGRO - MONTENEGRO/ RS":"REG 2 BR","TRACK REVOLUCAO - IJUI/ RS":"REG 2 BR",
+  "TRACK SOS RS - GRAVATAI/ RS":"REG 2 BR",
+  "TRACK METANOIA - SAO PAULO CATALOGO":"REG 1 BR","TRACK 3 COLINAS - FRANCA/ SP":"REG 1 BR",
+  "TRACK ATITUDE - BARUERI/ SP":"REG 1 BR","TRACK CAMINHOS DO MAR - SANTOS/ SP":"REG 1 BR",
+  "TRACK CORACAO VALENTE - SAO PAULO/ SP":"REG 1 BR","TRACK DISRUPCAO - SAO PAULO/ SP":"REG 1 BR",
+  "TRACK GRANDES LAGOS - SAO JOSE DO RIO PRETO/ SP":"REG 1 BR","TRACK GRITO DA LIBERDADE - BARUERI/ SP":"REG 1 BR",
+  "TRACK HOMENS CORAJOSOS - SAO JOSE DOS CAMPOS/ SP":"REG 1 BR",
+  "TRACK RESET E TRACK RESPLANDOR DE GLORIA - PIRACICABA/ SP":"REG 1 BR",
+  "TRACK RESGATE - CAMPINAS/ SP":"REG 1 BR","TRACK VALE DAS AGUAS - MARILIA/ SP":"REG 1 BR",
+  "TRACK VALE DO SOL - RIBEIRAO PRETO/ SP":"REG 1 BR","TRACK VALE DOS FORTES - ARACATUBA/ SP":"REG 1 BR",
+  "TRACK AZTECA":"México","TRACK CAMINO DEL GUERRERO":"México","TRACK SIERRA JUAREZ":"México",
+  "TRACK VALLE DE ORO":"México","TRACK GOLFO DE MEXICO":"México","TRACK CÂNON DEL BUFALO":"México",
+  "TRACK CAMINO AL CIELO":"México","TRACK REINO DE FUEGO":"México","TRACK LOS 300":"México",
+  "TRACK CIMARRON":"México","TRACK ADULAM CAVE":"México","TRACK ARROYO DEL LEON":"México",
+  "TRACK LLANO DE LOBOS":"México","TRACK DEL REY":"México","TRACK TIERRA PROMETIDA":"México",
+  "TRACK VERGEL":"México","TRACK VOLCÁN DE FUEGO":"México",
+  "TRACK ALMA GUERREIRA":"Estados Unidos","TRACK FORÇA SELVAGEM":"Estados Unidos","TRACK EAGLE PATH":"Estados Unidos",
+  "TRACK SOUL OF FIRE":"Estados Unidos","TRACK EAGLE NEST":"Estados Unidos","TRACK THUNDERBAY":"Estados Unidos",
+  "TRACK GRAND CANYON":"Estados Unidos","TRACK LEGENDARY TRAIL":"Estados Unidos","TRACK ROCKWOOD":"Estados Unidos",
+  "TRACK HORIZON":"Estados Unidos","TRACK UBREAKABLE":"Estados Unidos","TRACK TRI-STATE":"Estados Unidos",
+  "TRACK LIBERTY":"Estados Unidos","TRACK PEACE RIVER":"Estados Unidos","TRACK LA ZARZA":"Estados Unidos",
+  "TRACK PATRIOTAS VALLEY":"Estados Unidos","TRACK TRANSFORMACIONAL RIVER":"Estados Unidos",
+  "TRACK FRONT RANGE":"Estados Unidos","TRACK BREAKTROUGH":"Estados Unidos",
+  "TRACK BISON'S PEAK":"Estados Unidos","TRACK LAS VEGAS":"Estados Unidos",
+  "TRACK PORTA DA FORTALEZA":"Europa 1","TRACK TORRE FUERTE":"Europa 1","TRACK VINO NUOVO":"Europa 1",
+  "TRACK JAPÃO":"Europa 1","TRACK DUBAI":"Europa 1",
+  "TRACK THE KINGDOM":"Europa 2","TRACK THE HARBOUR":"Europa 2",
+  "TRACK GUATEMALA":"Latino América","TRACK CURACAO":"Latino América","TRACK PANAMÁ":"Latino América",
+  "TRACK REP. DOMINICANA":"Latino América","TRACK CHILE":"Latino América","TRACK PARAGUAY":"Latino América",
+  "TRACK EL SALVADOR":"Latino América","TRACK VENEZUELA":"Latino América","TRACK PERU":"Latino América",
+  "TRACK BOLÍVIA":"Latino América","TRACK COLOMBIA":"Latino América","TRACK ARGENTINA":"Latino América",
+  "TRACK EQUADOR":"Latino América","TRACK COSTA RICA":"Latino América",
+};
+
+function getRegional(t){
+  if(!t) return '—';
+  const s=t.toString().trim();
+  if(DEPARA[s]) return DEPARA[s];
+  const su=s.toUpperCase();
+  for(const[k,v] of Object.entries(DEPARA)) if(k.toUpperCase()===su) return v;
+  for(const[k,v] of Object.entries(DEPARA)) if(su.includes(k.toUpperCase())||k.toUpperCase().includes(su)) return v;
+  return s||'—';
+}
+
+// ================================================================
+// STATE
+// ================================================================
+let donations=[];
+
+// ================================================================
+// INIT — load from Supabase
+// ================================================================
+async function init(){
+  try {
+    $('lov-msg').textContent='Conectando ao Supabase…';
+    // load all rows (paginated up to 10k)
+    const data = await sbFetch('donations?select=*&order=data.asc&limit=10000');
+    donations = data||[];
+    setSt(`<span class="ok">🟢 ${donations.length} registros carregados do Supabase.</span>`);
+  } catch(e){
+    setSt(`<span class="err">⚠ Erro ao conectar: ${e.message}</span>`);
+    donations=[];
+  }
+  $('lov').style.display='none';
+  $('main').style.display='block';
+  renderAll();
+}
+
+// ================================================================
+// PARSE & UPLOAD
+// ================================================================
+function handleDonations(input){
+  const file=input.files[0]; if(!file) return;
+  setSt('<div class="spinner"></div><span>Processando planilha…</span>');
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try {
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+
+      const records=[];
+      for(const r of rows){
+        const id    =(r['#']||r['ID']||'').toString().trim();
+        const nome  =(r['Nome']||r['nome']||'').toString().trim();
+        const trilha=(r['Regional']||r['Trilha']||r['Produto']||'').toString().trim();
+        const produto=(r['Produto']||'').toString().trim();
+        const status=(r['Status']||'Ativo').toString().trim();
+        const valorRaw=(r['Valor do Bilhete']||r['Valor']||'0').toString().replace(/\./g,'').replace(',','.');
+        const valor=parseFloat(valorRaw)||0;
+        let dataCad=(r['Data cadastro']||r['Data']||'').toString().trim();
+
+        if(!nome||valor<=0) continue;
+        if(status.toLowerCase().includes('cancel')||status.toLowerCase().includes('inativ')) continue;
+
+        // normalize date
+        let dataNorm=null;
+        if(dataCad){
+          const m=dataCad.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+          if(m) dataNorm=`${m[3]}-${m[2]}-${m[1]}`;
+          else{const d=new Date(dataCad);if(!isNaN(d)) dataNorm=d.toISOString().split('T')[0];}
+        }
+
+        const regional=getRegional(trilha);
+        const comp_key=`${id}__${dataCad.replace(/\s+/g,'_')}__${valor}`;
+        records.push({comp_key,id,nome,trilha,produto,regional,data:dataNorm,valor,status});
+      }
+
+      if(!records.length){ setSt('<span class="warn">Nenhum registro válido encontrado.</span>'); return; }
+
+      setSt(`<div class="spinner"></div><span>Enviando ${records.length} registros ao Supabase…</span>`);
+
+      // upsert in batches of 500
+      const BATCH=500;
+      for(let i=0;i<records.length;i+=BATCH){
+        const batch=records.slice(i,i+BATCH);
+        await sbFetch('donations',{
+          method:'POST',
+          headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates'},
+          body:JSON.stringify(batch)
+        });
+        setSt(`<div class="spinner"></div><span>Enviando… ${Math.min(i+BATCH,records.length)}/${records.length}</span>`);
+      }
+
+      // reload from DB
+      donations=await sbFetch('donations?select=*&order=data.asc&limit=10000')||[];
+      setSt(`<span class="ok">✓ Sincronizado! ${donations.length} registros no banco. Planilha: ${records.length} registros processados.</span>`);
+      renderAll();
+    } catch(err){ setSt(`<span class="err">⚠ Erro: ${err.message}</span>`); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function clearAll(){
+  if(!confirm('Apagar TODOS os dados do banco Supabase? Esta ação não pode ser desfeita.')) return;
+  try {
+    setSt('<div class="spinner"></div><span>Limpando banco…</span>');
+    await sbFetch('donations?comp_key=neq.null',{method:'DELETE',headers:{...SB_HDR,'Prefer':''}});
+    donations=[];
+    setSt('<span class="ok">Banco limpo com sucesso.</span>');
+    renderAll();
+  } catch(e){ setSt(`<span class="err">⚠ Erro: ${e.message}</span>`); }
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+const $=id=>document.getElementById(id);
+const fmtUSD=n=>'$ '+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const toCotas=v=>Math.round(v/COTA_VAL);
+const setSt=h=>{ $('up-st').innerHTML=h; };
+
+// ================================================================
+// RENDER
+// ================================================================
+function renderAll(){
+  const data=donations;
+  const total=data.reduce((s,r)=>s+(parseFloat(r.valor)||0),0);
+  const tc=toCotas(total);
+  const donors=new Set(data.map(r=>r.nome?.trim())).size;
+  const regMap={};
+  data.forEach(r=>{const g=r.regional||'—';regMap[g]=(regMap[g]||0)+toCotas(parseFloat(r.valor)||0);});
+  const totalWells=Object.values(regMap).reduce((s,c)=>s+Math.floor(c/COTAS_POCO),0);
+
+  $('k-total').textContent=fmtUSD(total);
+  $('k-cotas').textContent=tc.toLocaleString('pt-BR');
+  $('k-donors').textContent=donors;
+  $('k-wells').textContent=totalWells;
+  $('k-regs').textContent=Object.keys(regMap).length;
+  $('last-upd').textContent=new Date().toLocaleString('pt-BR');
+  $('rec-cnt').textContent=data.length+' registros no banco';
+
+  updateProgress(tc);
+  renderWells(regMap);
+  renderRegBar(regMap);
+  renderDias(data);
+  renderDonors(data);
+  renderTbDias(data);
+  renderTbFull(data);
+}
+
+function updateProgress(tc){
+  const t=tc!==undefined?tc:toCotas(donations.reduce((s,r)=>s+(parseFloat(r.valor)||0),0));
+  const mv=parseFloat($('meta-inp').value)||1700000;
+  const mc=Math.round(mv/COTA_VAL);
+  const pct=Math.min(100,(t/mc)*100);
+  $('prog-bar').style.width=pct.toFixed(2)+'%';
+  $('prog-pct').textContent=pct.toFixed(1).replace('.',',')+'%';
+  $('prog-mid').textContent=t.toLocaleString('pt-BR')+' cotas arrecadadas';
+  $('prog-end').textContent='Meta: '+mc.toLocaleString('pt-BR')+' cotas';
+  $('meta-lbl').textContent=mc.toLocaleString('pt-BR')+' cotas · '+fmtUSD(mv);
+}
+
+function renderWells(regMap){
+  const sorted=Object.entries(regMap).sort((a,b)=>b[1]-a[1]);
+  let totC=0;
+  const html=sorted.map(([reg,cotas])=>{
+    const comp=Math.floor(cotas/COTAS_POCO),cur=cotas%COTAS_POCO,pct=(cur/COTAS_POCO)*100;
+    totC+=comp;
+    let wh='';
+    for(let i=0;i<comp;i++) wh+=wellCard(i+1,100,true);
+    wh+=wellCard(comp+1,pct,false,cur);
+    const progPct=Math.min(100,(cotas/(COTAS_POCO*(comp+1)))*100);
+    return `<div class="reg-block">
+      <div class="reg-hdr">
+        <div class="reg-name">${reg}</div>
+        <div class="reg-stats"><span>${cotas.toLocaleString('pt-BR')}</span> cotas · <span>${comp}</span> poço${comp!==1?'s':''} · <span>${pct.toFixed(1).replace('.',',')}%</span> do próximo</div>
+      </div>
+      <div class="reg-prog"><div class="reg-prog-fill" style="width:${progPct.toFixed(1)}%"></div></div>
+      <div class="wells-row">${wh}</div>
+    </div>`;
+  }).join('');
+  $('wells-con').innerHTML=html||'<div style="color:var(--muted);padding:16px;font-size:.82rem">Nenhuma regional encontrada. Importe a planilha.</div>';
+  $('wells-sum').textContent=`${totC} poços completos · ${sorted.length} regionais ativas`;
+}
+
+function wellCard(num,pct,complete,cotasAtual){
+  const uid='w'+Math.random().toString(36).slice(2,8);
+  const W=100,H=120,sw=24,sh=70,sx=(W-sw)/2,sy=20;
+  const wH=Math.round((pct/100)*sh),wY=sy+sh-wH;
+  const rw=44,rh=9,rx=(W-rw)/2,ry=sy-rh+2;
+  const clipId=`cl_${uid}`,gradId=`gr_${uid}`;
+  const wave=!complete&&wH>5
+    ?`<path d="M${sx},${wY} q6,-3 12,0 q6,3 12,0 v${wH} H${sx}Z" fill="#4ab3d8" opacity=".88"><animateTransform attributeName="transform" type="translate" values="0,0;-12,0;0,0" dur="2.5s" repeatCount="indefinite"/></path>`
+    :(wH>0?`<rect x="${sx}" y="${wY}" width="${sw}" height="${wH}" fill="url(#${gradId})"/>`:'');
+  const ticks=[.25,.5,.75].map(t=>{const ly=sy+sh*(1-t);return`<line x1="${sx+2}" y1="${ly}" x2="${sx+sw-2}" y2="${ly}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>`;}).join('');
+  const cotas=complete?850:(cotasAtual!==undefined?Math.round(cotasAtual):Math.round(pct/100*COTAS_POCO));
+  return `<div class="wcard ${complete?'complete':'forming'}">
+    <div class="wlbl">Poço #${num}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="${clipId}"><rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="3"/></clipPath>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4ab3d8"/><stop offset="100%" stop-color="#1a6a90"/></linearGradient>
+      </defs>
+      <rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="3" fill="rgba(255,255,255,.03)" stroke="rgba(200,160,60,.25)" stroke-width="1.5"/>
+      ${ticks}
+      ${wH>0?`<g clip-path="url(#${clipId})">${wave}</g>`:''}
+      <rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="2.5" fill="#2a1e0a" stroke="${complete?'var(--wl)':'var(--gold)'}" stroke-width="1.5"/>
+      <rect x="${sx-4}" y="${sy+sh-1}" width="4" height="8" rx="1" fill="rgba(200,160,60,.3)"/>
+      <rect x="${sx+sw}" y="${sy+sh-1}" width="4" height="8" rx="1" fill="rgba(200,160,60,.3)"/>
+      <line x1="${W/2}" y1="${ry}" x2="${W/2}" y2="${ry-13}" stroke="rgba(200,160,60,.4)" stroke-width="1.5" stroke-dasharray="2,2"/>
+      <rect x="${W/2-5}" y="${ry-19}" width="10" height="7" rx="1.5" fill="${complete?'var(--water)':'rgba(240,180,41,.2)'}" stroke="${complete?'var(--wl)':'var(--gold)'}" stroke-width="1"/>
+      <text x="${W/2}" y="${sy+sh/2+4}" text-anchor="middle" font-size="9" font-family="Oswald,sans-serif" fill="rgba(255,255,255,.55)">${pct.toFixed(0)}%</text>
+      ${complete?`<text x="${W/2}" y="${sy-3}" text-anchor="middle" font-size="10" fill="var(--wl)">✓</text>`:''}
+    </svg>
+    <div class="wcotas">${cotas.toLocaleString('pt-BR')} <small>/ 850</small></div>
+  </div>`;
+}
+
+function renderRegBar(regMap){
+  const sorted=Object.entries(regMap).sort((a,b)=>b[1]-a[1]);
+  const maxV=sorted[0]?.[1]||1,tot=sorted.reduce((s,x)=>s+x[1],0)||1;
+  $('ch-reg').innerHTML=sorted.map(([reg,c],i)=>`<div class="brow">
+    <div class="blbl" title="${reg}">${reg}</div>
+    <div class="btrack"><div class="bfill" style="width:${(c/maxV*100).toFixed(1)}%;background:${COLORS[i%COLORS.length]};color:#000">${c.toLocaleString('pt-BR')}</div></div>
+    <div class="bpct">${((c/tot)*100).toFixed(0)}%</div>
+  </div>`).join('');
+}
+
+function renderDias(data){
+  const map={};
+  data.forEach(r=>{if(r.data)map[r.data]=(map[r.data]||0)+toCotas(parseFloat(r.valor)||0);});
+  const days=Object.entries(map).sort((a,b)=>a[0]>b[0]?1:-1);
+  if(!days.length){$('ch-dias').innerHTML='<div style="color:var(--muted);font-size:.78rem;padding:16px 0">Sem dados</div>';return;}
+  const W=500,H=148,p={t:16,r:14,b:36,l:44};
+  const vals=days.map(d=>d[1]),maxV=Math.max(...vals)||1;
+  const xs=days.map((_,i)=>p.l+(i/(days.length-1||1))*(W-p.l-p.r));
+  const ys=vals.map(v=>p.t+(1-v/maxV)*(H-p.t-p.b));
+  const path=xs.map((x,i)=>(i===0?`M${x},${ys[i]}`:`L${x},${ys[i]}`)).join(' ');
+  const area=`${path} L${xs[xs.length-1]},${H-p.b} L${xs[0]},${H-p.b} Z`;
+  const dots=xs.map((x,i)=>`<circle cx="${x}" cy="${ys[i]}" r="3" fill="var(--wl)" stroke="var(--bg)" stroke-width="2"><title>${days[i][0]}: ${days[i][1]} cotas</title></circle>`).join('');
+  const xlbl=days.map((d,i)=>{const pt=d[0].split('-');return`<text x="${xs[i]}" y="${H-p.b+12}" text-anchor="middle" font-size="8.5" fill="#8a7a5a">${pt[2]}/${pt[1]}</text>`;}).join('');
+  const ylbl=[0,.5,1].map(t=>{const v=Math.round(t*maxV),y=p.t+(1-t)*(H-p.t-p.b);return`<text x="${p.l-5}" y="${y+3}" text-anchor="end" font-size="8.5" fill="#8a7a5a">${v}</text><line x1="${p.l}" y1="${y}" x2="${W-p.r}" y2="${y}" stroke="rgba(255,255,255,.04)" stroke-dasharray="3,3"/>`;}).join('');
+  $('ch-dias').innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="ag5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a7fa8" stop-opacity=".32"/><stop offset="100%" stop-color="#2a7fa8" stop-opacity="0"/></linearGradient></defs>
+    ${ylbl}<path d="${area}" fill="url(#ag5)"/><path d="${path}" fill="none" stroke="var(--wl)" stroke-width="2" stroke-linejoin="round"/>${dots}${xlbl}</svg>`;
+}
+
+function renderDonors(data){
+  const map={};
+  data.forEach(r=>{const k=r.nome?.trim();if(k)map[k]=(map[k]||0)+toCotas(parseFloat(r.valor)||0);});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxD=sorted[0]?.[1]||1;
+  $('ch-don').innerHTML=sorted.length?sorted.map(([n,c],i)=>`<div class="drow">
+    <div class="drank">${i+1}</div>
+    <div style="flex:1"><div class="dname">${n}</div><div class="dbar"><div class="dbar-f" style="width:${(c/maxD*100).toFixed(0)}%"></div></div></div>
+    <div class="damt">${c} <span style="font-size:.65rem;color:var(--muted)">cotas</span></div>
+  </div>`).join(''):'<div style="color:var(--muted);font-size:.78rem">Sem dados</div>';
+}
+
+function renderTbDias(data){
+  const map={};
+  data.forEach(r=>{if(!r.data)return;if(!map[r.data])map[r.data]={c:0,n:0};map[r.data].c+=toCotas(parseFloat(r.valor)||0);map[r.data].n++;});
+  let acc=0;
+  $('tb-dias').innerHTML=Object.entries(map).sort((a,b)=>a[0]>b[0]?1:-1).map(([d,v])=>{
+    acc+=v.c;
+    return`<tr><td>${d.split('-').reverse().join('/')}</td><td style="color:var(--gold)">${v.c}</td><td>${v.n}</td><td>${acc}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" style="color:var(--muted)">Sem dados</td></tr>';
+}
+
+function renderTbFull(data){
+  const sorted=[...data].sort((a,b)=>b.data>a.data?1:(b.data<a.data?-1:0)).slice(0,60);
+  $('tb-full').innerHTML=sorted.length?sorted.map(r=>`<tr>
+    <td style="color:var(--muted);font-size:.7rem">${r.id}</td>
+    <td>${r.nome}</td>
+    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;color:var(--muted)" title="${r.trilha||''}">${r.trilha||'—'}</td>
+    <td><span class="tag t-reg">${r.regional||'—'}</span></td>
+    <td>${r.data?r.data.split('-').reverse().join('/'):'—'}</td>
+    <td style="color:var(--gold);font-weight:600">${toCotas(parseFloat(r.valor)||0)} <span style="font-size:.65rem;color:var(--muted)">cotas</span></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted)">Sem dados</td></tr>';
+}
+
+$('meta-inp').addEventListener('input',updateProgress);
+init();
+</script>
+</body>
+</html>
