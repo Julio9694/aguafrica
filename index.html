@@ -383,7 +383,12 @@ function handleDonations(input){
 
       if(!records.length){ setSt('<span class="warn">Nenhum registro válido encontrado.</span>'); return; }
 
-      setSt(`<div class="spinner"></div><span>Enviando ${records.length} registros ao Supabase…</span>`);
+      // Deduplicate by comp_key BEFORE sending (same key can appear multiple times in spreadsheet)
+      const seen = new Set();
+      const unique = records.filter(r => { if(seen.has(r.comp_key)) return false; seen.add(r.comp_key); return true; });
+      const dupsRemoved = records.length - unique.length;
+
+      setSt(`<div class="spinner"></div><span>Enviando ${unique.length} registros ao Supabase${dupsRemoved>0?' ('+dupsRemoved+' duplicatas removidas)':''}…</span>`);
 
       // upsert in batches of 500
       const BATCH=500;
