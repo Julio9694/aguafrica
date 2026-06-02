@@ -120,7 +120,7 @@
 <header>
   <div class="hdr">
     <div>
-      <h1>Test AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
+      <h1>AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
       <div class="hdr-sub">Legendários · Dashboard de Arrecadação</div>
     </div>
     <div class="hdr-meta">
@@ -213,7 +213,10 @@ const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-
 async function sbFetch(path, opts={}) {
   const r = await fetch(SB_URL+'/rest/v1/'+path, { headers: SB_HDR, ...opts });
   if (!r.ok) { const t=await r.text(); throw new Error(t); }
-  return r.status===204 ? null : r.json();
+  if (r.status===204 || r.status===201) return null;
+  const text = await r.text();
+  if (!text || text.trim()==='') return null;
+  return JSON.parse(text);
 }
 
 // ================================================================
