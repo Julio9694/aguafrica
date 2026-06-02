@@ -120,8 +120,8 @@
 <header>
   <div class="hdr">
     <div>
-      <h1>Test AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
-      <div class="hdr-sub"> test Legendários · Dashboard de Arrecadação</div>
+      <h1>AGUA<span>ÁFRICA</span> · 100 POZOS</h1>
+      <div class="hdr-sub">Legendários · Dashboard de Arrecadação</div>
     </div>
     <div class="hdr-meta">
       <div>Atualizado: <span id="last-upd">—</span></div>
@@ -208,7 +208,7 @@
 // ================================================================
 const SB_URL  = 'https://kjwhjweeysynfgttgghb.supabase.co';
 const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtqd2hqd2VleXN5bmZndHRnZ2hiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzk2MTAsImV4cCI6MjA5NTk1NTYxMH0.XQIEDormUuE4I6xjUlK2DEpFNAGoLTwlXXaediOoI4U';
-const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+const SB_HDR  = { 'apikey': SB_KEY, 'Authorization': 'Bearer '+SB_KEY, 'Content-Type': 'application/json' };
 
 async function sbFetch(path, opts={}) {
   const r = await fetch(SB_URL+'/rest/v1/'+path, { headers: SB_HDR, ...opts });
